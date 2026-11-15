@@ -29,13 +29,13 @@ export default async function handler(req,res){
     if(body.action==='delete'){
       const clientId=clean(body.id,36);
       const {data:client,error}=await admin.from('clients').select('id').eq('id',clientId).maybeSingle();
-      if(error)return json(res,500,{error:'Impossible de vérifier ce client'});
-      if(!client)return json(res,404,{error:'Client introuvable'});
+      if(error)return json(res,500,{error:'Impossible de vérifier ce partenaire'});
+      if(!client)return json(res,404,{error:'Partenaire introuvable'});
       const {data:profiles,error:profileError}=await admin.from('profiles').select('id').eq('client_id',clientId);
-      if(profileError)return json(res,500,{error:'Impossible de vérifier les accès du client'});
+      if(profileError)return json(res,500,{error:'Impossible de vérifier les accès du partenaire'});
       for(const profile of profiles||[])await admin.auth.admin.deleteUser(profile.id);
       const {error:deleteError}=await admin.from('clients').delete().eq('id',clientId);
-      if(deleteError)return json(res,500,{error:'Impossible de supprimer le dossier client'});
+      if(deleteError)return json(res,500,{error:'Impossible de supprimer le dossier partenaire'});
       return json(res,200,{ok:true});
     }
 
@@ -43,19 +43,19 @@ export default async function handler(req,res){
     const connectionEmail=clean(body.connection_email||body.email,254).toLowerCase();
     const password=typeof body.password==='string'?body.password:'';
     if(body.action==='reset_password'){
-      if(!name&&!connectionEmail)return json(res,400,{error:'Client ou e-mail requis'});
+      if(!name&&!connectionEmail)return json(res,400,{error:'Partenaire ou e-mail requis'});
       if(password.length<10)return json(res,400,{error:'Le nouveau mot de passe doit contenir au moins 10 caractères'});
       let query=admin.from('clients').select('id,name,connection_email').limit(2);
       if(connectionEmail)query=query.eq('connection_email',connectionEmail);
       else if(name)query=query.ilike('name',name.replace(/[%_]/g,''));
       const {data:clients,error}=await query;
-      if(error)return json(res,500,{error:'Impossible de rechercher le client'});
-      if(!clients?.length)return json(res,404,{error:'Client introuvable'});
-      if(clients.length>1)return json(res,409,{error:'Plusieurs clients correspondent : utilisez l’e-mail de connexion'});
+      if(error)return json(res,500,{error:'Impossible de rechercher le partenaire'});
+      if(!clients?.length)return json(res,404,{error:'Partenaire introuvable'});
+      if(clients.length>1)return json(res,409,{error:'Plusieurs partenaires correspondent : utilisez l’e-mail de connexion'});
       const client=clients[0];
       const {data:profile,error:profileError}=await admin.from('profiles').select('id').eq('client_id',client.id).single();
-      if(profileError)return json(res,500,{error:'Impossible de vérifier l’accès du client'});
-      if(!profile)return json(res,409,{error:'Aucun accès utilisateur n’est associé à ce client'});
+      if(profileError)return json(res,500,{error:'Impossible de vérifier l’accès du partenaire'});
+      if(!profile)return json(res,409,{error:'Aucun accès utilisateur n’est associé à ce partenaire'});
       const {error:updateError}=await admin.auth.admin.updateUserById(profile.id,{password});
       if(updateError)return json(res,400,{error:updateError.message});
       const now=new Date().toISOString();
@@ -68,7 +68,7 @@ export default async function handler(req,res){
     if(password.length<10)return json(res,400,{error:'Le mot de passe doit contenir au moins 10 caractères'});
 
     const {data:existingClient}=await admin.from('clients').select('id').ilike('connection_email',connectionEmail.replace(/[%_]/g,'')).limit(1);
-    if(existingClient?.length)return json(res,409,{error:'Un client utilise déjà cet e-mail de connexion'});
+    if(existingClient?.length)return json(res,409,{error:'Un partenaire utilise déjà cet e-mail de connexion'});
     const {data:existingUsers,error:listError}=await admin.auth.admin.listUsers({page:1,perPage:1000});
     if(listError||!existingUsers)return json(res,500,{error:'Impossible de vérifier les comptes existants'});
     if((existingUsers.users||[]).some(user=>user.email?.toLowerCase()===connectionEmail))return json(res,409,{error:'Un compte existe déjà avec cet e-mail'});
@@ -85,12 +85,12 @@ export default async function handler(req,res){
     if(profileError){
       await admin.auth.admin.deleteUser(newUser.user.id);
       await admin.from('clients').delete().eq('id',client.id);
-      return json(res,500,{error:'Impossible de relier le compte au client'});
+      return json(res,500,{error:'Impossible de relier le compte au partenaire'});
     }
     await admin.from('clients').update({access_created_at:now}).eq('id',client.id);
-    return json(res,200,{ok:true,message:'Accès client créé'});
+    return json(res,200,{ok:true,message:'Accès partenaire créé'});
   }catch(error){
-    console.error('Client administration error',error);
+    console.error('Partner administration error',error);
     return json(res,500,{error:'Erreur interne du serveur'});
   }
 }

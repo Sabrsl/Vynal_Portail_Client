@@ -1,6 +1,6 @@
-# Portail client VYNAL AGENCY LTD (React + Vite + Supabase, déploiement Vercel)
+# Portail partenaire VYNAL AGENCY LTD (React + Vite + Supabase, déploiement Vercel)
 
-Chaque client se connecte et voit uniquement ses données.
+Chaque partenaire se connecte et voit uniquement ses données.
 
 ## Développement local
 

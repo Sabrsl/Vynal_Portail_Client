@@ -18,7 +18,7 @@ export const COL={
  depenses:{t:'Dépenses publicitaires',f:[['date','Date','d'],['plateforme','Plateforme'],['campagne','Campagne'],['montant','Montant (FCFA)','n'],['justificatif','Justificatif']]},
  actions:{t:'Actions & recommandations',f:[['action','Action'],['statut','Statut','s'],['objectif','Objectif attendu']]},
  strategies:{t:'Stratégies & plan d’action',f:[['titre','Stratégie'],['statut','Statut','s'],['objectif','Objectif'],['prochaine_etape','Prochaine étape'],['date_debut','Date de début','d']]},
- comptes:{t:'Comptes gérés (jamais de mot de passe)',f:[['compte','Compte'],['plateforme','Plateforme'],['statut','Statut'],['visible','Visible par le client','b'],['acces',"Accès de l'agence"],['twofa','2FA (Oui/Non)'],['vues','Vues actuelles','n'],['vuesLive','Vues LIVE','n'],['abonnes','Abonnés','n']]}
+ comptes:{t:'Comptes gérés (jamais de mot de passe)',f:[['compte','Compte'],['plateforme','Plateforme'],['statut','Statut'],['visible','Visible par le partenaire','b'],['acces',"Accès de l'agence"],['twofa','2FA (Oui/Non)'],['vues','Vues actuelles','n'],['vuesLive','Vues LIVE','n'],['abonnes','Abonnés','n']]}
 };
 export async function load(id){
   const [c,r,msg]=await Promise.all([

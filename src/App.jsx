@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';import {sb} from './supabase';import Admin from './Admin';import Portal from './Portal';
-const Shell=({children,out})=><><header><b>VYNAL AGENCY LTD · Portail client</b>{out&&<button onClick={()=>sb.auth.signOut()}>Déconnexion</button>}</header><main>{children}</main><footer>VYNAL AGENCY LTD · 71-75 Shelton Street, Covent Garden, London WC2H 9JQ · vynal.app@gmail.com</footer></>;
+const Shell=({children,out})=><><header><b>VYNAL AGENCY LTD · Portail partenaire</b>{out&&<button onClick={()=>sb.auth.signOut()}>Déconnexion</button>}</header><main>{children}</main><footer>VYNAL AGENCY LTD · 71-75 Shelton Street, Covent Garden, London WC2H 9JQ · vynal.app@gmail.com</footer></>;
 function Login(){
   const [e,setE]=useState(''),[p,setP]=useState(''),[m,setM]=useState('');
   const go=async ev=>{ev.preventDefault();const {error}=await sb.auth.signInWithPassword({email:e,password:p});if(error)setM('Identifiants incorrects')};
