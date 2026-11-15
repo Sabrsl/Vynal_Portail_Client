@@ -7,6 +7,17 @@ import {load,N,F,StatusBadge} from './lib';
 const tip={contentStyle:{background:'#16161b',border:'1px solid #2a2a33',borderRadius:10,color:'#f4f4f1',fontSize:13},labelStyle:{color:'#9b9ba7'}};
 const CONTACT_EMAIL='vynal.app@gmail.com';
 const WHATSAPP_NUMBER=(import.meta.env.VITE_WHATSAPP_NUMBER||'').replace(/[^\d]/g,'');
+const LANCEMENT={
+  debut:'15 novembre 2026',
+  rapport:'15 décembre 2026',
+  objectif:'Passer de 573 à 1 000 abonnés',
+  delai:'Premières données attendues sous 7 à 14 jours',
+  role:[
+    'Valider les 3 piliers de la stratégie proposée par l’équipe VYNAL.',
+    'Fournir photos et vidéos (produits, coulisses, avis clients) pour alimenter les publications.',
+    'Répondre sous 48 h aux demandes de l’équipe.'
+  ]
+};
 const ACTION_SECTIONS=[
   {statut:'Fait',title:'Ce qui a été fait',hint:'Actions terminées et résultats obtenus.'},
   {statut:'En cours',title:'Ce qui se passe maintenant',hint:'Actions en cours de réalisation.'},
@@ -81,6 +92,7 @@ export function Dashboard({client,d,userId,reload,preview}){
   }));
   if(audienceData.length&&audienceData.every(x=>periodIsDate(x.periode)))audienceData.sort((a,b)=>String(a.periode).localeCompare(String(b.periode)));
   const audTotals=audienceData.reduce((s,x)=>({vuesPub:s.vuesPub+N(x.vuesPub),vuesLive:s.vuesLive+N(x.vuesLive),followers:s.followers+N(x.followers),commentaires:s.commentaires+N(x.commentaires),partages:s.partages+N(x.partages)}),{vuesPub:0,vuesLive:0,followers:0,commentaires:0,partages:0});
+  const enLancement=m.length===0&&audienceData.length===0;
   const totalViews=audTotals.vuesPub+audTotals.vuesLive;
   const periodViews=audienceData.map(x=>N(x.vuesPub)+N(x.vuesLive));
   const viewsGrowth=periodViews.length>1&&periodViews[0]>0?Math.round((periodViews[periodViews.length-1]-periodViews[0])/periodViews[0]*100):null;
@@ -124,6 +136,19 @@ export function Dashboard({client,d,userId,reload,preview}){
     <div className="print-only"><div className="print-head"><div><p className="eyebrow">VYNAL AGENCY LTD</p><h1>Rapport partenaire — {client?.name}</h1><p className="muted">Édité le {printDate}</p></div><div className="print-contact">vynal.app@gmail.com<br/>contact@vynalapp.com</div></div></div>
     <div className="page-head"><div><p className="eyebrow">Portail partenaire</p><h1>{client?.name}</h1><p className="muted">Vue synthétique de vos performances, de vos résultats et des prochaines actions.</p></div><button className="ghost np" onClick={()=>window.print()}>Imprimer / PDF</button></div>
     {comptes.length>0&&<div className="acc-cloud"><span className="acc-cloud-label">Compte à visualiser</span><div className="acc-cloud-pills"><button className={['acc-pill',!acc&&'on'].filter(Boolean).join(' ')} onClick={()=>setAcc('')}>Tous les comptes</button>{comptes.map(x=><button key={x._id} className={['acc-pill',acc===String(x._id)&&'on'].filter(Boolean).join(' ')} onClick={()=>setAcc(acc===String(x._id)?'':String(x._id))}><b>{x.compte}</b><small>{x.plateforme}</small></button>)}</div></div>}
+    {enLancement&&<section className="panel launch-panel">
+      <div className="panel-head"><div><p className="eyebrow">Phase de lancement</p><h2>Bienvenue sur votre portail partenaire</h2></div><span>{LANCEMENT.delai}</span></div>
+      <p className="muted">Votre espace vient d’être activé. Les compteurs afficheront leurs premières valeurs à la fin de la période de collecte initiale — les zéros actuels sont normaux et seront remplacés par vos premiers résultats.</p>
+      <div className="launch-grid">
+        <div className="launch-item"><small>Début de la période</small><b>{LANCEMENT.debut}</b></div>
+        <div className="launch-item"><small>Premier rapport</small><b>{LANCEMENT.rapport}</b></div>
+        <div className="launch-item launch-goal"><small>Objectif période 1</small><b>{LANCEMENT.objectif}</b></div>
+      </div>
+      <div className="launch-role">
+        <h3>Votre rôle</h3>
+        <ul>{LANCEMENT.role.map((r,i)=><li key={i}>{r}</li>)}</ul>
+      </div>
+    </section>}
     <div className="bento">
       <Stat cls="hero" icon={ICO.trend} label="Vues cumulées" value={totalViews.toLocaleString('fr-FR')} accent="#d4af37" sub={growthText}/>
       <Stat cls="w3" icon={ICO.live} label="Vues LIVE" value={C('vuesLive').toLocaleString('fr-FR')} accent="#fb7185" sub="Temps réel"/>
