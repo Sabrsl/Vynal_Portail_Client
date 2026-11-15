@@ -129,9 +129,9 @@ export function Dashboard({client,d,userId,reload,preview}){
       <Stat cls="w3" icon={ICO.live} label="Vues LIVE" value={C('vuesLive').toLocaleString('fr-FR')} accent="#fb7185" sub="Temps réel"/>
       <Stat cls="w3" icon={ICO.users} label="Abonnés" value={C('abonnes').toLocaleString('fr-FR')} accent="#34d399"/>
       <Stat icon={ICO.eye} label="Vues actuelles" value={C('vues').toLocaleString('fr-FR')} accent="#60a5fa"/>
-      <Stat icon={ICO.chat} label="Commentaires" value={audTotals.commentaires.toLocaleString('fr-FR')} accent="#a78bfa"/>
+      <Stat cls="tall" icon={ICO.chat} label="Commentaires" value={audTotals.commentaires.toLocaleString('fr-FR')} accent="#a78bfa"/>
       <Stat icon={ICO.share} label="Partages" value={audTotals.partages.toLocaleString('fr-FR')} accent="#2dd4bf"/>
-      <Stat icon={ICO.wallet} label="Investissement" value={F(totInv)} accent="#fbbf24"/>
+      <Stat cls="tall" icon={ICO.wallet} label="Investissement" value={F(totInv)} accent="#fbbf24"/>
       <Stat icon={ICO.chart} label="CA encaissé" value={F(totCa)} accent="#10b981"/>
       <Stat icon={ICO.target} label="Stratégies actives" value={strategiesActive} accent="#818cf8"/>
       <Stat cls="w3" icon={ICO.check} label="Tâches accomplies" value={tasksDone} accent="#a3e635"/>
