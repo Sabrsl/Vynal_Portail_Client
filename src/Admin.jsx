@@ -96,8 +96,33 @@ function ClientAdmin({c,back}){
   {preview?<Portal clientId={c.id} userId={null} preview/>:s&&<><div className="summary-strip"><span>Investissement <b>{F(s.d.months.reduce((a,x)=>a+N(x.pub)+N(x.honoraires),0))}</b></span><span>CA encaissé <b>{F(s.d.months.reduce((a,x)=>a+N(x.ca),0))}</b></span><span>Résultat net <b>{F(s.d.months.reduce((a,x)=>a+N(x.ca)-N(x.pub)-N(x.honoraires),0))}</b></span><span>Données <b>{Object.keys(COL).reduce((a,k)=>a+(s.d[k]||[]).length,0)}</b></span><span>Tâches accomplies <b>{(s.d.actions||[]).filter(a=>a.statut==='Fait').length}</b></span><span>Stratégies actives <b>{(s.d.strategies||[]).filter(a=>a.statut==='En cours').length}</b></span><span>Vues actuelles <b>{s.d.comptes.reduce((a,x)=>a+N(x.vues),0).toLocaleString('fr-FR')}</b></span><span>Vues LIVE <b>{s.d.comptes.reduce((a,x)=>a+N(x.vuesLive),0).toLocaleString('fr-FR')}</b></span><span>Abonnés <b>{s.d.comptes.reduce((a,x)=>a+N(x.abonnes),0).toLocaleString('fr-FR')}</b></span></div><Messages clientId={c.id} messages={s.d.messages||[]} reload={reload}/><div className="grid2"><form className="panel" onSubmit={reset}><h2>Accès et sécurité</h2><p className="muted">Les mots de passe ne sont jamais affichés. Définissez un nouveau mot de passe temporaire à transmettre au partenaire.</p><label>Nouveau mot de passe temporaire<input type="password" minLength={10} required value={pass} onChange={e=>setPass(e.target.value)}/></label><button>Réinitialiser le mot de passe</button></form><section className="panel danger-zone"><h2>Zone sensible</h2><p className="muted">La suppression retire définitivement le dossier, les données et le compte de connexion.</p><button className="danger" onClick={del}>Supprimer ce partenaire</button></section></div>{Object.keys(COL).map(k=><Editor key={k} id={c.id} kind={k} rows={s.d[k]} reload={reload} comptes={s.d.comptes}/>)}</>}</>;
 }
 
+function accessMessage(a){
+  const url=window.location.origin||'';
+  return `Bonjour ${a.name},\n\nVotre accès au portail partenaire VYNAL AGENCY LTD est prêt.\n\nLien de connexion : ${url}\nE-mail : ${a.email}\nMot de passe temporaire : ${a.password}\n\nConnectez-vous avec ces identifiants, puis nous vous recommandons de changer ce mot de passe.\n\nPour toute question, répondez simplement à cet e-mail.\n\nCordialement,\nVYNAL AGENCY LTD`;
+}
+const gmailCompose=(a,su,body)=>`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(a.email)}&su=${encodeURIComponent(su)}&body=${encodeURIComponent(body)}`;
+
+function AccessModal({a,onClose}){
+  const [copied,setCopied]=useState('');
+  const message=accessMessage(a);
+  const copy=async(key,text)=>{try{await navigator.clipboard.writeText(text);setCopied(key);setTimeout(()=>setCopied(''),2000)}catch{alert('Copie impossible')}};
+  const creds=`Nom : ${a.name}\nE-mail : ${a.email}\nMot de passe temporaire : ${a.password}`;
+  const subject=`Vos identifiants — Portail partenaire VYNAL AGENCY LTD`;
+  return <div className="modal-back" onClick={onClose}><div className="modal" onClick={e=>e.stopPropagation()} role="dialog" aria-modal="true">
+    <div className="panel-head"><div><p className="eyebrow">Accès créé</p><h2>{a.name}</h2></div><button className="ghost" onClick={onClose} aria-label="Fermer">✕</button></div>
+    <p className="muted">Transmettez ces identifiants au partenaire. Le mot de passe ne sera plus affiché ensuite.</p>
+    <div className="creds-box"><pre>{creds}</pre><button type="button" className="ghost" onClick={()=>copy('creds',creds)}>{copied==='creds'?'Copié !':'Copier les accès'}</button></div>
+    <label className="modal-label">Message prérempli<textarea readOnly rows={9} value={message}/></label>
+    <div className="form-actions">
+      <button type="button" className="ghost" onClick={()=>copy('msg',message)}>{copied==='msg'?'Copié !':'Copier le message'}</button>
+      <a className="modal-gmail" href={gmailCompose(a,subject,message)} target="_blank" rel="noreferrer">Envoyer par e-mail (Gmail)</a>
+      <button type="button" className="ghost" onClick={onClose}>Fermer</button>
+    </div>
+  </div></div>;
+}
+
 export default function Admin(){
-  const [cs,setCs]=useState([]),[sel,setSel]=useState(null),[f,setF]=useState({name:'',email:'',password:''}),[err,setErr]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false);
+  const [cs,setCs]=useState([]),[sel,setSel]=useState(null),[f,setF]=useState({name:'',email:'',password:''}),[err,setErr]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[access,setAccess]=useState(null);
   const [unreadCounts,setUnreadCounts]=useState({});
   const [notification,setNotification]=useState(null);
   const loadUnreadCounts=async()=>{
@@ -116,10 +141,10 @@ export default function Admin(){
     }).subscribe();
     return()=>{sb.removeChannel(channel)};
   },[]);
-  const create=async e=>{e.preventDefault();setBusy(true);setErr('');setNotice('');const er=await api({...f,connection_email:f.email});setBusy(false);if(er)setErr(er);else{setNotice('Accès partenaire créé avec succès');setF({name:'',email:'',password:''});ld()}};
+  const create=async e=>{e.preventDefault();setBusy(true);setErr('');setNotice('');const creds={name:f.name,email:f.email,password:f.password};const er=await api({...f,connection_email:f.email});setBusy(false);if(er)setErr(er);else{setAccess(creds);setF({name:'',email:'',password:''});ld()}};
   if(sel)return <ClientAdmin c={sel} back={()=>{setSel(null);ld()}}/>;
   return <><div className="page-head"><div><p className="eyebrow">Espace agence</p><h1>Partenaires</h1><p>Créez des accès et pilotez la visibilité de chaque portail.</p></div><span className="badge">{cs.length} partenaire{cs.length>1?'s':''}</span></div>{err&&<div className="notice error">{err}</div>}{notice&&<div className="notice success">{notice}</div>}
   {notification&&<div className="notice success admin-message-notification"><b>Notification :</b> {notification}<button type="button" className="ghost" onClick={()=>setNotification(null)}>Fermer</button></div>}
   <section className="panel"><div className="panel-head"><h2>Partenaires existants</h2><span>Gestion des accès</span></div><div className="sc"><table className="clients-table"><thead><tr><th>Partenaire</th><th>E-mail de connexion</th><th>Accès créé</th><th>Messages non lus</th><th/></tr></thead><tbody>{cs.map(c=>{const count=unreadCounts[c.id]||0;return <tr key={c.id}><td><b>{c.name}</b></td><td>{c.connection_email||c.email||'—'}</td><td>{c.access_created_at?new Date(c.access_created_at).toLocaleDateString('fr-FR'):'—'}</td><td>{count?<span className="unread-count">{count} nouveau{count>1?'x':''}</span>:'—'}</td><td><button onClick={()=>setSel(c)}>Gérer</button></td></tr>})}{!cs.length&&<tr><td colSpan="5" className="empty">Aucun partenaire pour le moment</td></tr>}</tbody></table></div></section>
-  <section className="panel create-panel"><div><p className="eyebrow">Nouveau compte</p><h2>Créer l’accès d’un partenaire</h2><p className="muted">Le partenaire ne verra que son propre portail : résultats, actions, dépenses autorisées et comptes gérés.</p></div><form className="f create-form" onSubmit={create}><label>Nom du partenaire<input required value={f.name} onChange={e=>setF({...f,name:e.target.value})}/></label><label>E-mail de connexion<input required type="email" autoComplete="username" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></label><label>Mot de passe temporaire<input required minLength={10} type="password" autoComplete="new-password" value={f.password} onChange={e=>setF({...f,password:e.target.value})}/><small>10 caractères minimum. Transmettez-le de façon sécurisée puis réinitialisez-le si nécessaire.</small></label><button disabled={busy}>{busy?'Création…':'Créer l’accès'}</button></form></section></>;
+  <section className="panel create-panel"><div><p className="eyebrow">Nouveau compte</p><h2>Créer l’accès d’un partenaire</h2><p className="muted">Le partenaire ne verra que son propre portail : résultats, actions, dépenses autorisées et comptes gérés.</p></div><form className="f create-form" onSubmit={create}><label>Nom du partenaire<input required value={f.name} onChange={e=>setF({...f,name:e.target.value})}/></label><label>E-mail de connexion<input required type="email" autoComplete="username" value={f.email} onChange={e=>setF({...f,email:e.target.value})}/></label><label>Mot de passe temporaire<input required minLength={10} type="password" autoComplete="new-password" value={f.password} onChange={e=>setF({...f,password:e.target.value})}/><small>10 caractères minimum. Transmettez-le de façon sécurisée puis réinitialisez-le si nécessaire.</small></label><button disabled={busy}>{busy?'Création…':'Créer l’accès'}</button></form></section>{access&&<AccessModal a={access} onClose={()=>setAccess(null)}/>}</>;
 }

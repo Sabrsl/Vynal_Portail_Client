@@ -20,6 +20,21 @@ const whatsapp=(client,note='')=>{
 const periodIsDate=x=>/^\d{4}-\d{2}/.test(String(x));
 const num=(obj,keys)=>{for(const k of keys)if(obj?.[k]!==undefined&&obj?.[k]!==null&&obj?.[k]!=='')return N(obj[k]);return 0;};
 const monthMarge=x=>x.marge===undefined||x.marge===null||x.marge===''?N(x.ca)-N(x.pub)-N(x.honoraires):N(x.marge);
+const I=d=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{d}</svg>;
+const ICO={
+  trend:I(<><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></>),
+  live:I(<path d="M3 12h4l2.5-6 5 12 2.5-6H21"/>),
+  users:I(<><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.4 2.9-5.5 5.5-5.5s4.9 2.1 5.5 5.5"/><path d="M15.5 5.2a3.2 3.2 0 0 1 0 5.9M17.5 14.9c1.8.7 3 2.4 3.4 5.1"/></>),
+  eye:I(<><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/></>),
+  chat:I(<path d="M20 12a8 8 0 0 1-8 8c-1.3 0-2.5-.3-3.6-.9L4 21l1.8-4.4A8 8 0 1 1 20 12Z"/>),
+  share:I(<><circle cx="6" cy="12" r="2.4"/><circle cx="17.5" cy="5.5" r="2.4"/><circle cx="17.5" cy="18.5" r="2.4"/><path d="m8.2 10.9 6.6-3.8M8.2 13.1l6.6 3.8"/></>),
+  wallet:I(<><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10.5h18"/><circle cx="16.8" cy="14.8" r="1.3"/></>),
+  chart:I(<><path d="M4 20V4"/><path d="M4 20h16"/><path d="M8.5 16v-4.5M12.5 16V8.5M16.5 16v-6"/></>),
+  target:I(<><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".8" fill="currentColor"/></>),
+  check:I(<><circle cx="12" cy="12" r="8.5"/><path d="m8.5 12.3 2.4 2.4 4.6-5"/></>),
+  clock:I(<><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></>)
+};
+const Stat=({icon,label,value,accent='#d4af37',cls='',sub})=><div className={['k',cls].filter(Boolean).join(' ')} style={{'--acc':accent}}><span className="k-ic">{icon}</span><div className="k-txt"><small>{label}</small><b>{value}</b>{sub&&<em>{sub}</em>}</div></div>;
 
 export function Dashboard({client,d,userId,reload,preview}){
   const [acc,setAcc]=useState('');
@@ -39,7 +54,6 @@ export function Dashboard({client,d,userId,reload,preview}){
   const dp=(d.depenses||[]).filter(x=>byAcc(x)&&linked(x));
   const strategies=(d.strategies||[]).filter(x=>byAcc(x)&&linked(x));
   const messages=useMemo(()=>[...(d.messages||[])]
-    .filter(m=>String(m.sender)!=='admin'||!m.client_read_at)
     .sort((a,b)=>{
       const direction=msgSort==='new'?-1:1;
       return direction*String(a.created_at||'').localeCompare(String(b.created_at||''));
@@ -57,7 +71,6 @@ export function Dashboard({client,d,userId,reload,preview}){
   const md=m.map(x=>({mois:x.mois,'Investissement':N(x.pub)+N(x.honoraires),'CA encaissé':N(x.ca),'Marge produits':monthMarge(x)}));
   const totInv=m.reduce((s,x)=>s+N(x.pub)+N(x.honoraires),0);
   const totCa=m.reduce((s,x)=>s+N(x.ca),0);
-  const totMarge=m.reduce((s,x)=>s+monthMarge(x),0);
   const audienceData=aa.map(a=>({
     periode:a.periode||a.date||a.mois||'—',
     vuesPub:num(a,['vuesPub','vues_publications','vuesPublication','vues']),
@@ -71,6 +84,7 @@ export function Dashboard({client,d,userId,reload,preview}){
   const totalViews=audTotals.vuesPub+audTotals.vuesLive;
   const periodViews=audienceData.map(x=>N(x.vuesPub)+N(x.vuesLive));
   const viewsGrowth=periodViews.length>1&&periodViews[0]>0?Math.round((periodViews[periodViews.length-1]-periodViews[0])/periodViews[0]*100):null;
+  const growthText=viewsGrowth===null?'Historique en cours de collecte':viewsGrowth>=0?`+${viewsGrowth}% depuis la 1ʳᵉ période`:`${viewsGrowth}% depuis la 1ʳᵉ période`;
 
   const MSGS_PER_PAGE=2;
   const {pageItems,pageCount,currentPage}=useMemo(()=>{
@@ -95,7 +109,6 @@ export function Dashboard({client,d,userId,reload,preview}){
     if(reload)reload();
   };
 
-  const K=(a,b,c,variant='')=><div className={`k ${variant}`.trim()}><small>{a}</small><b className={c}>{b}</b></div>;
   const printDate=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
   const note=message.message.trim();
 
@@ -111,19 +124,18 @@ export function Dashboard({client,d,userId,reload,preview}){
     <div className="print-only"><div className="print-head"><div><p className="eyebrow">VYNAL AGENCY LTD</p><h1>Rapport partenaire — {client?.name}</h1><p className="muted">Édité le {printDate}</p></div><div className="print-contact">vynal.app@gmail.com<br/>contact@vynalapp.com</div></div></div>
     <div className="page-head"><div><p className="eyebrow">Portail partenaire</p><h1>{client?.name}</h1><p className="muted">Vue synthétique de vos performances, de vos résultats et des prochaines actions.</p></div><button className="ghost np" onClick={()=>window.print()}>Imprimer / PDF</button></div>
     {comptes.length>0&&<div className="acc-cloud"><span className="acc-cloud-label">Compte à visualiser</span><div className="acc-cloud-pills"><button className={['acc-pill',!acc&&'on'].filter(Boolean).join(' ')} onClick={()=>setAcc('')}>Tous les comptes</button>{comptes.map(x=><button key={x._id} className={['acc-pill',acc===String(x._id)&&'on'].filter(Boolean).join(' ')} onClick={()=>setAcc(acc===String(x._id)?'':String(x._id))}><b>{x.compte}</b><small>{x.plateforme}</small></button>)}</div></div>}
-    <div className="g">
-      {K('Stratégies actives',strategiesActive,'', 'stat-violet')}
-      {K('Vues actuelles',C('vues').toLocaleString('fr-FR'),'', 'stat-blue')}
-      {K('Vues LIVE',C('vuesLive').toLocaleString('fr-FR'),'', 'stat-cyan')}
-      {K('Abonnés',C('abonnes').toLocaleString('fr-FR'),'', 'stat-green')}
-      {K('Tâches accomplies',tasksDone,'', 'stat-emerald')}
-      {K('Actions en cours',tasksOpen,'', 'stat-amber')}
-      {K('Investissement',F(totInv),'', 'stat-violet')}
-      {K('CA encaissé',F(totCa),'', 'stat-blue')}
-      {K('Marge produits',F(totMarge),'', 'stat-green')}
-      {K('Vues cumulées',totalViews.toLocaleString('fr-FR'),'', 'stat-blue')}
-      {K('Commentaires',audTotals.commentaires.toLocaleString('fr-FR'),'', 'stat-violet')}
-      {K('Partages',audTotals.partages.toLocaleString('fr-FR'),'', 'stat-teal')}
+    <div className="bento">
+      <Stat cls="hero" icon={ICO.trend} label="Vues cumulées" value={totalViews.toLocaleString('fr-FR')} accent="#d4af37" sub={growthText}/>
+      <Stat cls="w3" icon={ICO.live} label="Vues LIVE" value={C('vuesLive').toLocaleString('fr-FR')} accent="#fb7185" sub="Temps réel"/>
+      <Stat cls="w3" icon={ICO.users} label="Abonnés" value={C('abonnes').toLocaleString('fr-FR')} accent="#34d399"/>
+      <Stat icon={ICO.eye} label="Vues actuelles" value={C('vues').toLocaleString('fr-FR')} accent="#60a5fa"/>
+      <Stat icon={ICO.chat} label="Commentaires" value={audTotals.commentaires.toLocaleString('fr-FR')} accent="#a78bfa"/>
+      <Stat icon={ICO.share} label="Partages" value={audTotals.partages.toLocaleString('fr-FR')} accent="#2dd4bf"/>
+      <Stat icon={ICO.wallet} label="Investissement" value={F(totInv)} accent="#fbbf24"/>
+      <Stat icon={ICO.chart} label="CA encaissé" value={F(totCa)} accent="#10b981"/>
+      <Stat icon={ICO.target} label="Stratégies actives" value={strategiesActive} accent="#818cf8"/>
+      <Stat cls="w3" icon={ICO.check} label="Tâches accomplies" value={tasksDone} accent="#a3e635"/>
+      <Stat cls="w3" icon={ICO.clock} label="Actions en cours" value={tasksOpen} accent="#fb923c"/>
     </div>
     <div className="v">{!audienceData.length?'Les premières performances apparaîtront après le premier mois de suivi.':viewsGrowth===null?'La croissance de l’audience sera mesurée à partir de la prochaine période de reporting.':viewsGrowth>=0?`✔ Audience en progression : +${viewsGrowth}% de vues entre la première et la dernière période suivie.`:`Audience en cours d’optimisation : notre équipe ajuste la stratégie pour relancer la croissance des vues et de l’engagement.`}</div>
 
