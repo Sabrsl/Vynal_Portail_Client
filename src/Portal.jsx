@@ -2,7 +2,7 @@ import {useEffect,useMemo,useState} from 'react';
 import {ComposedChart,Bar,LineChart,Line,XAxis,YAxis,Tooltip,Legend,ResponsiveContainer,CartesianGrid} from 'recharts';
 import {sb} from './supabase';
 import Pager from './Pager';
-import {load,N,F} from './lib';
+import {load,N,F,StatusBadge} from './lib';
 
 const tip={contentStyle:{background:'#16161b',border:'1px solid #2a2a33',borderRadius:10,color:'#f4f4f1',fontSize:13},labelStyle:{color:'#9b9ba7'}};
 const CONTACT_EMAIL='vynal.app@gmail.com';
@@ -46,9 +46,6 @@ export function Dashboard({client,d,userId,reload,preview}){
   const unreadMessages=(d.messages||[]).filter(m=>m.sender==='admin'&&!m.client_read_at);
 
   const m=[...mm].sort((a,b)=>String(a.mois).localeCompare(String(b.mois)));
-  const T=k=>m.reduce((s,x)=>s+N(x[k]),0);
-  const pub=T('pub'),fees=T('honoraires'),ca=T('ca');
-  const inv=pub+fees,res=ca-inv;
   const shown=acc?comptes.filter(x=>String(x._id)===acc):comptes;
   const C=k=>shown.reduce((s,x)=>s+N(x[k]),0);
   const tasksDone=(d.actions||[]).filter(a=>a.statut==='Fait').length;
@@ -56,7 +53,10 @@ export function Dashboard({client,d,userId,reload,preview}){
   const strategiesActive=strategies.filter(s=>s.statut==='En cours').length;
   const cname=cid=>{const c=(d.comptes||[]).find(x=>String(x._id)===String(cid));return c?`${c.compte} · ${c.plateforme}`:'Tous les comptes';};
 
-  const md=m.map(x=>{const investment=N(x.pub)+N(x.honoraires);return {mois:x.mois,'CA encaissé':N(x.ca),'Investissement':investment,'Résultat net':N(x.ca)-investment};});
+  const md=m.map(x=>({mois:x.mois,'Investissement':N(x.pub)+N(x.honoraires),'CA encaissé':N(x.ca)}));
+  const totInv=m.reduce((s,x)=>s+N(x.pub)+N(x.honoraires),0);
+  const totCa=m.reduce((s,x)=>s+N(x.ca),0);
+  const totMarge=m.reduce((s,x)=>s+N(x.marge),0);
   const audienceData=aa.map(a=>({
     periode:a.periode||a.date||a.mois||'—',
     vuesPub:num(a,['vuesPub','vues_publications','vuesPublication','vues']),
@@ -67,6 +67,9 @@ export function Dashboard({client,d,userId,reload,preview}){
   }));
   if(audienceData.length&&audienceData.every(x=>periodIsDate(x.periode)))audienceData.sort((a,b)=>String(a.periode).localeCompare(String(b.periode)));
   const audTotals=audienceData.reduce((s,x)=>({vuesPub:s.vuesPub+N(x.vuesPub),vuesLive:s.vuesLive+N(x.vuesLive),followers:s.followers+N(x.followers),commentaires:s.commentaires+N(x.commentaires),partages:s.partages+N(x.partages)}),{vuesPub:0,vuesLive:0,followers:0,commentaires:0,partages:0});
+  const totalViews=audTotals.vuesPub+audTotals.vuesLive;
+  const periodViews=audienceData.map(x=>N(x.vuesPub)+N(x.vuesLive));
+  const viewsGrowth=periodViews.length>1&&periodViews[0]>0?Math.round((periodViews[periodViews.length-1]-periodViews[0])/periodViews[0]*100):null;
 
   const MSGS_PER_PAGE=2;
   const {pageItems,pageCount,currentPage}=useMemo(()=>{
@@ -105,7 +108,7 @@ export function Dashboard({client,d,userId,reload,preview}){
 
   return <>
     <div className="print-only"><div className="print-head"><div><p className="eyebrow">VYNAL AGENCY LTD</p><h1>Rapport client — {client?.name}</h1><p className="muted">Édité le {printDate}</p></div><div className="print-contact">vynal.app@gmail.com<br/>contact@vynalapp.com</div></div></div>
-    <div className="page-head"><div><p className="eyebrow">Portail client</p><h1>{client?.name}</h1><p className="muted">Vue synthétique de votre investissement, de vos résultats et des prochaines actions.</p></div><button className="ghost np" onClick={()=>window.print()}>Imprimer / PDF</button></div>
+    <div className="page-head"><div><p className="eyebrow">Portail client</p><h1>{client?.name}</h1><p className="muted">Vue synthétique de vos performances, de vos résultats et des prochaines actions.</p></div><button className="ghost np" onClick={()=>window.print()}>Imprimer / PDF</button></div>
     {comptes.length>0&&<div className="acc-cloud"><span className="acc-cloud-label">Compte à visualiser</span><div className="acc-cloud-pills"><button className={['acc-pill',!acc&&'on'].filter(Boolean).join(' ')} onClick={()=>setAcc('')}>Tous les comptes</button>{comptes.map(x=><button key={x._id} className={['acc-pill',acc===String(x._id)&&'on'].filter(Boolean).join(' ')} onClick={()=>setAcc(acc===String(x._id)?'':String(x._id))}><b>{x.compte}</b><small>{x.plateforme}</small></button>)}</div></div>}
     <div className="g">
       {K('Stratégies actives',strategiesActive,'', 'stat-violet')}
@@ -114,11 +117,14 @@ export function Dashboard({client,d,userId,reload,preview}){
       {K('Abonnés',C('abonnes').toLocaleString('fr-FR'),'', 'stat-green')}
       {K('Tâches accomplies',tasksDone,'', 'stat-emerald')}
       {K('Actions en cours',tasksOpen,'', 'stat-amber')}
-      {K('Investissement total',F(inv),'', 'stat-rose')}
-      {K('CA encaissé',F(ca),'ok', 'stat-green')}
-      {K('Résultat net',F(res),res<0?'neg':'ok', res<0?'stat-red':'stat-teal')}
+      {K('Investissement',F(totInv),'', 'stat-violet')}
+      {K('CA encaissé',F(totCa),'', 'stat-blue')}
+      {K('Marge produits',F(totMarge),'', 'stat-green')}
+      {K('Vues cumulées',totalViews.toLocaleString('fr-FR'),'', 'stat-blue')}
+      {K('Commentaires',audTotals.commentaires.toLocaleString('fr-FR'),'', 'stat-violet')}
+      {K('Partages',audTotals.partages.toLocaleString('fr-FR'),'', 'stat-teal')}
     </div>
-    <div className="v">{!inv&&!ca?'Les premiers résultats apparaîtront après le premier mois de suivi.':res>=0?'✔ Investissement rentabilisé : le CA encaissé couvre la publicité et les honoraires.':`Investissement en cours de rentabilisation : il reste ${F(-res)} de CA encaissé à générer pour couvrir publicité et honoraires.`}</div>
+    <div className="v">{!audienceData.length?'Les premières performances apparaîtront après le premier mois de suivi.':viewsGrowth===null?'La croissance de l’audience sera mesurée à partir de la prochaine période de reporting.':viewsGrowth>=0?`✔ Audience en progression : +${viewsGrowth}% de vues entre la première et la dernière période suivie.`:`Audience en cours d’optimisation : notre équipe ajuste la stratégie pour relancer la croissance des vues et de l’engagement.`}</div>
 
     <section className="panel contact-panel"><div className="panel-head"><h2>Contacter l’équipe VYNAL</h2><span>Réponse sous 24 h</span></div>
       <p className="muted">{preview?'Aperçu de ce que voit le client.':'Posez une question, demandez un ajustement de stratégie ou un reporting complémentaire.'}</p>
@@ -150,17 +156,17 @@ export function Dashboard({client,d,userId,reload,preview}){
       </div>
     </section>
 
-    <section className="panel"><div className="panel-head"><h2>Évolution mensuelle</h2><span>CA encaissé vs investissement</span></div>{md.length?<div className="chart"><ResponsiveContainer><ComposedChart data={md}><CartesianGrid stroke="#26262f" strokeDasharray="3 3"/><XAxis dataKey="mois" stroke="#9b9ba7" fontSize={12}/><YAxis stroke="#9b9ba7" fontSize={12} tickFormatter={v=>v.toLocaleString('fr-FR')}/><Tooltip {...tip} formatter={v=>F(v)}/><Legend/><Bar dataKey="CA encaissé" fill="#d4af37" radius={[4,4,0,0]}/><Bar dataKey="Investissement" fill="#3a3a46" radius={[4,4,0,0]}/><Line dataKey="Résultat net" stroke="#f87171" strokeWidth={2} dot={{r:2.5}}/></ComposedChart></ResponsiveContainer></div>:<div className="chart empty-chart"><p className="muted">Aucune donnée mensuelle pour le moment.</p></div>}</section>
+    <section className="panel"><div className="panel-head"><h2>Activité mensuelle</h2><span>Investissement vs CA</span></div>{md.length?<div className="chart"><ResponsiveContainer><ComposedChart data={md}><CartesianGrid stroke="#26262f" strokeDasharray="3 3"/><XAxis dataKey="mois" stroke="#9b9ba7" fontSize={12}/><YAxis stroke="#9b9ba7" fontSize={12} allowDecimals={false}/><Tooltip {...tip}/><Legend/><Bar dataKey="Investissement" fill="#d4af37" radius={[4,4,0,0]}/><Bar dataKey="CA encaissé" fill="#34d399" radius={[4,4,0,0]}/></ComposedChart></ResponsiveContainer></div>:<div className="chart empty-chart"><p className="muted">Aucune donnée mensuelle pour le moment.</p></div>}</section>
     <section className="panel"><div className="panel-head"><h2>Évolution de l'audience</h2><span>{audienceData.length?`${audienceData.length} période(s) renseignée(s)`:'Aucune période renseignée'}</span></div>
       {audienceData.length?<><div className="audience-totals">{[['Vues publications',audTotals.vuesPub],['Vues LIVE',audTotals.vuesLive],['Nouveaux followers',audTotals.followers],['Commentaires',audTotals.commentaires],['Partages',audTotals.partages]].map(([l,v])=><div className="audience-total" key={l}><small>{l}</small><b>{N(v).toLocaleString('fr-FR')}</b></div>)}</div><div className="chart"><ResponsiveContainer><LineChart data={audienceData}><CartesianGrid stroke="#26262f" strokeDasharray="3 3"/><XAxis dataKey="periode" stroke="#9b9ba7" fontSize={12}/><YAxis stroke="#9b9ba7" fontSize={12} allowDecimals={false}/><Tooltip {...tip}/><Legend/><Line dataKey="vuesPub" name="Vues publications" stroke="#d4af37" strokeWidth={2} dot={{r:2.5}}/><Line dataKey="vuesLive" name="Vues LIVE" stroke="#38bdf8" strokeWidth={2} dot={{r:2.5}}/><Line dataKey="followers" name="Nouveaux followers" stroke="#34d399" strokeWidth={2} dot={{r:2.5}}/></LineChart></ResponsiveContainer></div></>:<div className="chart empty-chart"><p className="muted">Aucune donnée d’audience pour cette sélection. L’équipe peut la renseigner depuis l’administration.</p></div>}
     </section>
 
-    <section className="panel"><div className="panel-head"><h2>Stratégie adoptée</h2><span>{strategiesActive} en cours</span></div>{strategies.length?<div className="sc"><table><thead><tr><th>Stratégie</th><th>Statut</th><th>Objectif</th><th>Prochaine étape</th><th>Compte</th></tr></thead><tbody>{strategies.map(s=><tr key={s._id}><td><b>{s.titre}</b></td><td><span className={s.statut==='En cours'?'cur':s.statut==='Fait'?'ok':'nx'}>{s.statut}</span></td><td>{s.objectif||'—'}</td><td>{s.prochaine_etape||'—'}</td><td>{cname(s.compte_id)}</td></tr>)}</tbody></table></div>:<p className="muted">Aucune stratégie renseignée pour le moment.</p>}</section>
+    <section className="panel"><div className="panel-head"><h2>Stratégie adoptée</h2><span>{strategiesActive} en cours</span></div>{strategies.length?<div className="sc rt"><table><thead><tr><th>Stratégie</th><th>Statut</th><th>Objectif</th><th>Prochaine étape</th><th>Compte</th></tr></thead><tbody>{strategies.map(s=><tr key={s._id}><td data-label="Stratégie"><b>{s.titre}</b></td><td data-label="Statut"><StatusBadge v={s.statut}/></td><td data-label="Objectif">{s.objectif||'—'}</td><td data-label="Prochaine étape">{s.prochaine_etape||'—'}</td><td data-label="Compte">{cname(s.compte_id)}</td></tr>)}</tbody></table></div>:<p className="muted">Aucune stratégie renseignée pour le moment.</p>}</section>
 
-    {ACTION_SECTIONS.map(({statut,title,hint})=>{const r=(d.actions||[]).filter(a=>a.statut===statut);return r.length?<section className="panel" key={statut}><div className="panel-head"><h2><span className={statut==='Fait'?'ok':statut==='En cours'?'cur':'nx'}>{title}</span> <small className="muted">({r.length})</small></h2><span>{hint}</span></div><div className="sc"><table><thead><tr><th>Action</th><th>Objectif attendu</th></tr></thead><tbody>{r.map(a=><tr key={a._id}><td>{a.action}</td><td>{a.objectif}</td></tr>)}</tbody></table></div></section>:null})}
+    {ACTION_SECTIONS.map(({statut,title,hint})=>{const r=(d.actions||[]).filter(a=>a.statut===statut);return r.length?<section className="panel" key={statut}><div className="panel-head"><h2><StatusBadge v={statut}/> {title} <small className="muted">({r.length})</small></h2><span>{hint}</span></div><div className="sc rt"><table><thead><tr><th>Action</th><th>Objectif attendu</th></tr></thead><tbody>{r.map(a=><tr key={a._id}><td data-label="Action">{a.action}</td><td data-label="Objectif attendu">{a.objectif}</td></tr>)}</tbody></table></div></section>:null})}
 
-    <section className="panel"><div className="panel-head"><h2>Dépenses publicitaires</h2></div><div className="sc"><table><thead><tr><th>Date</th><th>Plateforme</th><th>Campagne</th><th>Montant</th><th>Justificatif</th></tr></thead><tbody>{dp.map(x=><tr key={x._id}><td>{x.date}</td><td>{x.plateforme}</td><td>{x.campagne}</td><td>{F(x.montant)}</td><td>{x.justificatif}</td></tr>)}{dp.length===0&&<tr><td colSpan="5" className="empty">Aucune dépense renseignée pour le moment</td></tr>}<tr className="total"><th colSpan="3">Total</th><th colSpan="2">{F(dp.reduce((s,x)=>s+N(x.montant),0))}</th></tr></tbody></table></div></section>
-    <section className="panel"><div className="panel-head"><h2>Comptes gérés</h2></div>{d.comptes.length&&!comptes.length?<p className="muted">Aucun compte géré ne vous est actuellement visible. Contactez l’agence.</p>:<div className="sc"><table><thead><tr><th>Compte</th><th>Plateforme</th><th>Statut</th><th>Accès agence</th><th>2FA</th><th>Vues actuelles</th><th>Vues LIVE</th><th>Abonnés</th></tr></thead><tbody>{shown.map(x=><tr key={x._id}><td>{x.compte}</td><td>{x.plateforme}</td><td>{x.statut}</td><td>{x.acces}</td><td>{x.twofa}</td><td>{N(x.vues).toLocaleString('fr-FR')}</td><td>{N(x.vuesLive).toLocaleString('fr-FR')}</td><td>{N(x.abonnes).toLocaleString('fr-FR')}</td></tr>)}{shown.length>0&&<tr className="total"><th colSpan="5">Total</th><td><b>{C('vues').toLocaleString('fr-FR')}</b></td><td><b>{C('vuesLive').toLocaleString('fr-FR')}</b></td><td><b>{C('abonnes').toLocaleString('fr-FR')}</b></td></tr>}{!shown.length&&<tr><td colSpan="8" className="empty">Aucun compte visible pour cette sélection</td></tr>}</tbody></table></div>}</section>
+    <section className="panel"><div className="panel-head"><h2>Dépenses publicitaires</h2></div><div className="sc rt"><table><thead><tr><th>Date</th><th>Plateforme</th><th>Campagne</th><th>Montant</th><th>Justificatif</th></tr></thead><tbody>{dp.map(x=><tr key={x._id}><td data-label="Date">{x.date}</td><td data-label="Plateforme">{x.plateforme}</td><td data-label="Campagne">{x.campagne}</td><td data-label="Montant">{F(x.montant)}</td><td data-label="Justificatif">{x.justificatif}</td></tr>)}{dp.length===0&&<tr><td colSpan="5" className="empty">Aucune dépense renseignée pour le moment</td></tr>}<tr className="total"><th colSpan="3">Total</th><th colSpan="2">{F(dp.reduce((s,x)=>s+N(x.montant),0))}</th></tr></tbody></table></div></section>
+    <section className="panel"><div className="panel-head"><h2>Comptes gérés</h2></div>{d.comptes.length&&!comptes.length?<p className="muted">Aucun compte géré ne vous est actuellement visible. Contactez l’agence.</p>:<div className="sc rt"><table><thead><tr><th>Compte</th><th>Plateforme</th><th>Statut</th><th>Accès agence</th><th>2FA</th><th>Vues actuelles</th><th>Vues LIVE</th><th>Abonnés</th></tr></thead><tbody>{shown.map(x=><tr key={x._id}><td data-label="Compte"><b>{x.compte}</b></td><td data-label="Plateforme">{x.plateforme}</td><td data-label="Statut"><StatusBadge v={x.statut}/></td><td data-label="Accès agence">{x.acces}</td><td data-label="2FA">{x.twofa}</td><td data-label="Vues actuelles">{N(x.vues).toLocaleString('fr-FR')}</td><td data-label="Vues LIVE">{N(x.vuesLive).toLocaleString('fr-FR')}</td><td data-label="Abonnés">{N(x.abonnes).toLocaleString('fr-FR')}</td></tr>)}{shown.length>0&&<tr className="total"><th colSpan="5">Total</th><td><b>{C('vues').toLocaleString('fr-FR')}</b></td><td><b>{C('vuesLive').toLocaleString('fr-FR')}</b></td><td><b>{C('abonnes').toLocaleString('fr-FR')}</b></td></tr>}{!shown.length&&<tr><td colSpan="8" className="empty">Aucun compte visible pour cette sélection</td></tr>}</tbody></table></div>}</section>
   </>;
 }
 

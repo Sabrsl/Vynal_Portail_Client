@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react';
 import {sb} from './supabase';
 import Portal from './Portal';
 import Pager from './Pager';
-import {COL,STATUTS,PAR_COMPTE,load,F,N} from './lib';
+import {COL,STATUTS,PAR_COMPTE,load,F,N,StatusBadge} from './lib';
 
 async function api(body){
   try{
@@ -40,7 +40,7 @@ function Editor({id,kind,rows,reload,comptes}){
   return <section className="panel">
     <div className="panel-head"><h2>{def.t}</h2><span>{rows.length} élément{rows.length>1?'s':''}</span></div>
     <div className="sc"><table><thead><tr>{def.f.map(f=><th key={f[0]}>{f[1]}</th>)}{linked&&<th>Compte</th>}<th/></tr></thead><tbody>
-      {rows.length?rows.map(r=><tr key={r._id}>{def.f.map(f=><td key={f[0]}>{f[2]==='n'?(f[0]==='montant'?F(r[f[0]]):N(r[f[0]]).toLocaleString('fr-FR')):f[2]==='b'?(r[f[0]]?'Oui':'Non'):(r[f[0]]||'—')}</td>)}{linked&&<td>{cname(r.compte_id)}</td>}<td className="row-actions"><button className="ghost" onClick={()=>startEdit(r)}>Modifier</button><button className="danger" onClick={()=>del(r._id)}>Supprimer</button></td></tr>):<tr><td colSpan={def.f.length+(linked?2:1)} className="empty">Aucune donnée pour le moment</td></tr>}
+      {rows.length?rows.map(r=><tr key={r._id}>{def.f.map(f=><td key={f[0]}>{f[2]==='n'?(f[0]==='montant'?F(r[f[0]]):N(r[f[0]]).toLocaleString('fr-FR')):f[0]==='statut'?<StatusBadge v={r[f[0]]}/>:f[2]==='b'?(r[f[0]]?'Oui':'Non'):(r[f[0]]||'—')}</td>)}{linked&&<td>{cname(r.compte_id)}</td>}<td className="row-actions"><button className="ghost" onClick={()=>startEdit(r)}>Modifier</button><button className="danger" onClick={()=>del(r._id)}>Supprimer</button></td></tr>):<tr><td colSpan={def.f.length+(linked?2:1)} className="empty">Aucune donnée pour le moment</td></tr>}
     </tbody></table></div>
     <form className="f" onSubmit={save}>{def.f.map(([k,l,t])=>t==='s'?<select key={k} value={v[k]??STATUTS[0]} onChange={e=>setV({...v,[k]:e.target.value})}>{STATUTS.map(s=><option key={s}>{s}</option>)}</select>:t==='b'?<label key={k} className="chk"><input type="checkbox" checked={v[k]??true} onChange={e=>setV({...v,[k]:e.target.checked})}/> {l}</label>:<input key={k} required placeholder={l} type={t==='n'?'number':t==='d'?'date':t==='m'?'month':'text'} step="any" value={v[k]??''} onChange={e=>setV({...v,[k]:e.target.value})}/>)}{linked&&<select value={v.compte_id??''} onChange={e=>setV({...v,compte_id:e.target.value})}><option value="">Tous les comptes</option>{(comptes||[]).map(c=><option key={c._id} value={c._id}>{c.compte} · {c.plateforme}</option>)}</select>}<div className="form-actions">{editing&&<button type="button" className="ghost" onClick={cancel}>Annuler</button>}<button>{editing?'Enregistrer les modifications':'Ajouter'}</button></div></form>
   </section>;

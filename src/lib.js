@@ -1,7 +1,16 @@
+import {createElement as h} from 'react';
 import {sb} from './supabase';
 export const N=v=>Number(v)||0;
 export const F=n=>N(n).toLocaleString('fr-FR')+' FCFA';
 export const STATUTS=['Fait','En cours','À venir'];
+export const STATUT_CLS={
+  'Fait':'st-done','Terminé':'st-done','Actif':'st-done',
+  'En cours':'st-cur','En pause':'st-warn','Suspendu':'st-warn',
+  'À venir':'st-next','Planifié':'st-next',
+  'Inactif':'st-muted'
+};
+export const statutCls=v=>STATUT_CLS[v]||'st-muted';
+export const StatusBadge=({v})=>h('span',{className:`st ${statutCls(v)}`},v||'—');
 export const PAR_COMPTE=['months','audience','depenses','strategies'];
 export const COL={
  months:{t:'Suivi mensuel',f:[['mois','Mois','m'],['pub','Publicité dépensée (FCFA)','n'],['honoraires','Honoraires agence (FCFA)','n'],['demandes','Demandes','n'],['ventes','Ventes payées','n'],['ca','CA encaissé (FCFA)','n'],['marge','Marge produits (FCFA)','n']]},
